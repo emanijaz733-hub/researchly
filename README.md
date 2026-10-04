@@ -131,6 +131,9 @@ The environment variables keep the `NEXUS_` prefix from the project's original n
 
 **Not built yet:** end-to-end and accessibility tests, PDF export (Markdown only), an admin UI to enable or disable providers, analytics charts.
 
+
 ## License
 
-MIT
+Copyright (c) 2026 Eman Ijaz. All rights reserved.
+
+This code is shared for viewing only. You may not copy, modify, or use it without my written permission. To ask, open an issue on this repository.
