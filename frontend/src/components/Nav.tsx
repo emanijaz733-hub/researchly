@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, tokens } from "@/lib/api";
 
-/** Shared top navigation: wordmark, primary destinations, session state. */
+/** Masthead: typewriter wordmark, destinations, session state. */
 export function Nav() {
   const [signedIn, setSignedIn] = useState(false);
   const router = useRouter();
@@ -31,27 +31,38 @@ export function Nav() {
   };
 
   return (
-    <header className="flex items-center justify-between py-6">
-      <Link href="/" className="font-display text-xl font-semibold tracking-tight">
-        Nexus<span className="text-cobalt">.</span>
-      </Link>
-      <nav className="flex items-center gap-6 text-sm text-muted">
-        <Link href="/chat" className="hover:text-ink">Chat</Link>
-        <Link href="/library" className="hover:text-ink">Library</Link>
-        {signedIn ? (
-          <button onClick={signOut} className="hover:text-ink">Sign out</button>
-        ) : (
-          <Link
-            href="/login"
-            className="rounded-full bg-ink px-4 py-1.5 text-sm text-white transition-colors hover:bg-cobalt"
-          >
-            Sign in
+    <header className="pt-8">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-1">
+          <Link href="/" className="font-mono text-[32px] tracking-[0.18em] text-ink no-underline">
+            RESEARCHLY
           </Link>
-        )}
-        <kbd className="hidden rounded-md border border-hairline bg-surface px-1.5 py-0.5 font-mono text-[11px] text-muted sm:inline">
-          Ctrl K
-        </kbd>
-      </nav>
+          <span className="text-[15px] italic text-muted">
+            Research notebook · every claim footnoted
+          </span>
+        </div>
+        <nav className="flex flex-wrap items-center gap-5 font-mono text-[14px]">
+          <Link href="/chat" className="text-muted no-underline hover:text-ink">Chat</Link>
+          <Link href="/library" className="text-muted no-underline hover:text-ink">Library</Link>
+          <Link href="/workspaces" className="text-muted no-underline hover:text-ink">Workspaces</Link>
+          {signedIn ? (
+            <button onClick={signOut} className="text-muted hover:text-ink">
+              Sign out
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="inline-flex min-h-[44px] items-center bg-ink px-4 text-paper no-underline hover:bg-redink"
+            >
+              Sign in
+            </Link>
+          )}
+          <kbd className="hidden border border-rule px-1.5 py-0.5 font-mono text-[11px] text-muted sm:inline">
+            Ctrl K
+          </kbd>
+        </nav>
+      </div>
+      <div className="double-rule mt-5" />
     </header>
   );
 }

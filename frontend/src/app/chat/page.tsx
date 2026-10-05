@@ -7,6 +7,8 @@ import { CitedText, type Citation } from "@/components/CitedText";
 interface ConvSummary { id: string; title: string; shared: boolean }
 interface Msg { role: string; content: string; citations: Citation[] }
 
+/** Research chat as correspondence: your questions are memos,
+ * Researchly replies with footnoted letters. */
 export default function ChatPage() {
   const [convs, setConvs] = useState<ConvSummary[]>([]);
   const [active, setActive] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export default function ChatPage() {
     try {
       setConvs(await api<ConvSummary[]>("/conversations"));
     } catch {
-      setError(tokens.access ? "Could not load conversations." : "Sign in to use research chat.");
+      setError(tokens.access ? "Could not load your letters." : "Sign in to use research chat.");
     }
   };
 
@@ -33,6 +35,12 @@ export default function ChatPage() {
     setShareUrl(null);
     const conv = await api<{ messages: Msg[] }>(`/conversations/${id}`);
     setMessages(conv.messages);
+  };
+
+  const startNew = () => {
+    setActive(null);
+    setMessages([]);
+    setShareUrl(null);
   };
 
   const send = async () => {
@@ -82,101 +90,150 @@ export default function ChatPage() {
     try { await navigator.clipboard.writeText(url); } catch { /* clipboard optional */ }
   };
 
+  const signedOut = !tokens.access && error;
+
   return (
-    <main className="mx-auto flex h-screen max-w-6xl gap-8 px-5 py-6">
-      <aside className="hidden w-60 shrink-0 flex-col md:flex">
-        <Link href="/" className="mb-8 font-display text-xl font-semibold tracking-tight">
-          Nexus<span className="text-cobalt">.</span>
-        </Link>
-        <button
-          onClick={() => { setActive(null); setMessages([]); setShareUrl(null); }}
-          className="mb-4 rounded-xl border border-hairline bg-surface py-2.5 text-sm font-medium text-ink shadow-card transition-colors hover:border-cobalt/40"
-        >
-          New research
-        </button>
-        <div className="flex flex-col gap-0.5 overflow-y-auto">
+    <main className="min-h-screen bg-desk px-5 py-10">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-start gap-8">
+        {/* Correspondence file */}
+        <aside className="flex flex-[1_1_240px] flex-col gap-2.5">
+          <Link href="/" className="font-mono text-[22px] tracking-[0.18em] text-paper no-underline">
+            RESEARCHLY
+          </Link>
+          <p className="mb-3 font-mono text-[12px] tracking-[0.2em] text-[#c9b48f]">CORRESPONDENCE FILE</p>
+          <button
+            onClick={startNew}
+            className="min-h-[44px] border-[1.5px] border-dashed border-[#c9b48f] font-mono text-[13px] tracking-[0.12em] text-paper hover:bg-paper/10"
+          >
+            + START A NEW LETTER
+          </button>
           {convs.map((c) => (
-            <button key={c.id} onClick={() => open(c.id)}
-              className={`truncate rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                c.id === active ? "bg-wash text-ink" : "text-muted hover:bg-surface hover:text-ink"}`}>
-              {c.title}
-              {c.shared && <span className="ml-1.5 text-[10px] uppercase tracking-wide text-cobalt">shared</span>}
+            <button
+              key={c.id}
+              onClick={() => open(c.id)}
+              className={`min-h-[44px] bg-[#e9dcbd] px-4 py-3 text-left text-[17px] text-ink shadow-card hover:bg-surface ${
+                c.id === active ? "border-t-[3px] border-redink" : ""
+              }`}
+            >
+              <span className="line-clamp-2">{c.title || "Untitled letter"}</span>
+              {c.shared && <span className="mt-1 block font-mono text-[11px] text-muted">photocopied</span>}
             </button>
           ))}
-        </div>
-      </aside>
+        </aside>
 
-      <section className="flex min-w-0 flex-1 flex-col">
-        <header className="mb-5 flex items-center justify-between border-b border-hairline pb-4">
-          <h1 className="font-display text-lg font-medium">Research chat</h1>
-          {active && (
-            <div className="flex gap-4 text-sm text-muted">
-              <button onClick={share} className="hover:text-ink">Share</button>
-              <button onClick={() => downloadText(`/export/conversations/${active}.md`, "conversation.md")}
-                className="hover:text-ink">Export</button>
-            </div>
+        {/* Letters */}
+        <section className="flex min-w-0 flex-[999_1_620px] flex-col gap-7">
+          {signedOut && (
+            <p className="text-[18px] italic text-paper">
+              {error}{" "}
+              <Link href="/login" className="text-[#f0b9a8]">Show your reader&apos;s card</Link>
+            </p>
           )}
-        </header>
-        {shareUrl && (
-          <p className="mb-4 truncate rounded-xl border border-cobalt/30 bg-wash px-4 py-2.5 text-sm text-cobalt-deep">
-            Link copied: {shareUrl}
-          </p>
-        )}
-        {error && <p className="mb-4 text-sm text-danger">{error}{" "}
-          {!tokens.access &&
-          <Link href="/login" className="text-cobalt underline-offset-2 hover:underline">Sign in</Link>}</p>}
 
-        <div className="flex-1 space-y-6 overflow-y-auto pr-1">
-          {messages.length === 0 && !error && (
-            <div className="mt-24 text-center">
-              <p className="font-display text-xl text-ink/80">Ask, then keep asking.</p>
-              <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-                Every question runs a fresh multi-provider search. Follow-ups keep
-                the thread&apos;s context.
+          {messages.length === 0 && !signedOut && (
+            <div className="bg-paper px-8 py-10 shadow-sheet">
+              <p className="type-label">A NEW LETTER</p>
+              <p className="mt-3 text-[26px] italic">Write your first memo below.</p>
+              <p className="mt-2 text-[17px] text-muted">
+                Each memo starts a fresh search across all archives. Follow-up memos keep the context of the letter.
               </p>
             </div>
           )}
-          {messages.map((m, i) => (
-            <div key={i}>
-              {m.role === "user" ? (
-                <p className="font-display text-lg font-medium leading-snug">{m.content}</p>
-              ) : (
-                <div className="max-w-measure text-[15px] leading-[1.75] text-ink/90">
-                  <CitedText text={m.content} citations={m.citations} />
-                  {m.citations.length > 0 && (
-                    <div className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-hairline pt-3">
-                      {m.citations.map((c) => (
-                        <a key={c.n} href={c.url} target="_blank" rel="noreferrer"
-                           className="inline-flex max-w-[240px] items-center gap-1.5 truncate text-xs text-muted hover:text-cobalt">
-                          <span className="cite-mark shrink-0">{c.n}</span>
-                          <span className="truncate">{c.title}</span>
-                        </a>
-                      ))}
-                    </div>
+
+          {messages.map((m, i) =>
+            m.role === "user" ? (
+              <div
+                key={i}
+                className={`max-w-[460px] self-end bg-memo px-5 py-4 shadow-[inset_0_0_30px_rgba(140,100,30,0.25),0_10px_24px_rgba(0,0,0,0.45)] ${
+                  i % 4 === 0 ? "rotate-[1.2deg]" : "-rotate-[0.8deg]"
+                }`}
+              >
+                <p className="font-mono text-[11px] tracking-[0.14em] text-rule">MEMO · FROM: YOU</p>
+                <p className="mt-1 text-[19px] leading-snug">{m.content}</p>
+              </div>
+            ) : (
+              <article key={i} className="-rotate-[0.3deg] bg-paper px-6 py-8 shadow-sheet sm:px-12">
+                <p className="font-mono text-[12px] tracking-[0.14em] text-muted">
+                  FROM: RESEARCHLY ARCHIVE · RE: YOUR MEMO
+                </p>
+                <div className="mt-4 max-w-measure text-[19px] leading-[1.75]">
+                  {m.content ? (
+                    <CitedText text={m.content} citations={m.citations} />
+                  ) : (
+                    <span className="font-hand text-[24px] text-redink">consulting the archives…</span>
                   )}
                 </div>
-              )}
-            </div>
-          ))}
-          <div ref={bottomRef} />
-        </div>
+                {m.citations.length > 0 && (
+                  <div className="mt-6 border-t border-dotted border-rule pt-3 text-[15px] leading-7 text-muted">
+                    {m.citations.slice(0, 8).map((c) => (
+                      <div key={c.n} className="flex gap-2">
+                        <span className="font-mono text-redink">{c.n}</span>
+                        <a href={c.url} target="_blank" rel="noreferrer" className="truncate text-muted no-underline hover:text-ink">
+                          {c.title}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </article>
+            )
+          )}
 
-        <div className="mt-5 flex items-center gap-2 rounded-2xl border border-hairline bg-surface p-2 pl-4 shadow-field focus-within:border-cobalt/50">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            placeholder={busy ? "Researching" : "Ask a follow-up"}
-            aria-label="Chat message"
-            disabled={busy}
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted/70"
-          />
-          <button onClick={send} disabled={busy}
-            className="shrink-0 rounded-xl bg-cobalt px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cobalt-deep disabled:opacity-50">
-            Send
-          </button>
-        </div>
-      </section>
+          {busy && <p className="font-hand text-[24px] text-[#e8cfa0]">the archive is typing a reply…</p>}
+          {error && !signedOut && <p className="font-mono text-[13px] text-[#f0b9a8]">{error}</p>}
+
+          {/* Typewriter */}
+          {!signedOut && (
+            <div className="mt-2">
+              <div className="h-6 bg-[#1a120c]" aria-hidden />
+              <div className="flex flex-col gap-3 bg-paper px-6 pb-5 pt-5 shadow-sheet">
+                <label htmlFor="memo" className="type-label">WRITE YOUR NEXT MEMO</label>
+                <textarea
+                  id="memo"
+                  rows={3}
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      void send();
+                    }
+                  }}
+                  placeholder="Ask a research question or a follow-up"
+                  className="resize-none border-0 border-b-2 border-dashed border-rule bg-transparent font-mono text-[17px] text-ink outline-none placeholder:text-muted/70 focus:border-redink"
+                />
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex flex-wrap gap-5 font-mono text-[13px]">
+                    <button
+                      onClick={share}
+                      disabled={!active}
+                      className="min-h-[44px] text-muted underline hover:text-ink disabled:no-underline disabled:opacity-50"
+                    >
+                      Make a photocopy (share link)
+                    </button>
+                    <button
+                      onClick={() => active && downloadText(`/export/conversations/${active}.md`, "letter.md")}
+                      disabled={!active}
+                      className="min-h-[44px] text-muted underline hover:text-ink disabled:no-underline disabled:opacity-50"
+                    >
+                      Export as Markdown
+                    </button>
+                  </div>
+                  <button onClick={send} disabled={busy} className="stamp">
+                    {busy ? "SENDING…" : "SEND MEMO"}
+                  </button>
+                </div>
+                {shareUrl && (
+                  <p className="font-mono text-[12px] text-ok">
+                    Photocopy link copied: <span className="break-all">{shareUrl}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+          <div ref={bottomRef} />
+        </section>
+      </div>
     </main>
   );
 }

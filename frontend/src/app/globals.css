@@ -1,66 +1,165 @@
+@import url("https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Special+Elite&family=Caveat:wght@500&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background: #fbfbfa;
-  color: #191917;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+/* ---------- Page: aged paper with burned edges ---------- */
+
+html {
+  background: #2e2118;
 }
 
-::selection { background: #2f4fd822; }
+/* The coffee ring sits partly off-page; never let it cause sideways scroll. */
+html,
+body {
+  overflow-x: hidden;
+}
 
-:focus-visible {
-  outline: 2px solid #2f4fd8;
-  outline-offset: 2px;
-  border-radius: 2px;
+body {
+  position: relative;
+  min-height: 100vh;
+  color: #2b2117;
+  font-family: "EB Garamond", Georgia, serif;
+  font-size: 18px;
+  background-color: #efe3c6;
+  background-image:
+    radial-gradient(ellipse at 18% 22%, rgba(150, 110, 55, 0.13), transparent 38%),
+    radial-gradient(ellipse at 82% 68%, rgba(130, 90, 40, 0.12), transparent 42%),
+    radial-gradient(ellipse at 50% 100%, rgba(120, 80, 35, 0.16), transparent 55%);
+  background-attachment: fixed;
+}
+
+/* Burned edges: stay on the margins so the reading area stays clean. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    inset 0 0 120px rgba(95, 55, 18, 0.45),
+    inset 0 0 28px rgba(70, 38, 10, 0.55);
+  background: radial-gradient(
+    ellipse at 0% 100%,
+    rgba(20, 12, 6, 0.9) 0,
+    rgba(91, 52, 20, 0.6) 70px,
+    rgba(140, 85, 35, 0.25) 130px,
+    transparent 200px
+  );
+}
+
+/* Coffee ring in the top-right margin. */
+body::after {
+  content: "";
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 210px;
+  height: 210px;
+  border-radius: 50%;
+  border: 9px solid rgba(112, 66, 24, 0.3);
+  box-shadow: inset 0 0 0 6px rgba(112, 66, 24, 0.08);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Keep real content above the decoration. */
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
-/* Citation chips: the link between answer and source. */
-.cite-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 1.15rem;
-  height: 1.15rem;
-  margin: 0 0.12rem;
-  padding: 0 0.25rem;
-  border-radius: 0.3rem;
-  background: #eef1fc;
-  color: #2440b8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.68rem;
-  font-weight: 500;
-  line-height: 1;
-  vertical-align: 0.15em;
-  cursor: pointer;
-  border: none;
-  transition: background 120ms ease, color 120ms ease;
-  text-decoration: none;
-}
-.cite-mark:hover { background: #2f4fd8; color: #ffffff; }
+/* ---------- Shared pieces used by components ---------- */
 
-/* Streaming caret */
-@keyframes caret-blink { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+@layer components {
+  /* Red footnote number used for citations. */
+  .cite-mark {
+    @apply mx-[1px] inline-block align-super font-mono text-[12px] leading-none text-redink no-underline;
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0 2px;
+  }
+  .cite-mark:hover,
+  .cite-mark:focus-visible {
+    @apply text-redink-deep underline;
+    outline: none;
+  }
+
+  /* Small typewriter label above sections. */
+  .type-label {
+    @apply font-mono text-[13px] tracking-[0.2em] text-muted;
+  }
+
+  /* The red ink stamp used for primary actions. */
+  .stamp {
+    @apply inline-flex min-h-[48px] items-center justify-center border-[2.5px] border-redink bg-transparent px-5 font-mono text-[15px] tracking-[0.14em] text-redink transition-colors;
+    transform: rotate(-2deg);
+  }
+  .stamp:hover {
+    @apply bg-redink text-paper;
+  }
+  .stamp:disabled {
+    @apply cursor-wait opacity-60;
+  }
+
+  /* Double rule under the masthead. */
+  .double-rule {
+    @apply h-[3px] border-b border-t-2 border-ink;
+  }
+}
+
+/* Blinking typewriter cursor while the answer streams in. */
 .stream-caret {
   display: inline-block;
-  width: 2px;
-  height: 1.05em;
+  width: 0.55em;
+  height: 1em;
   margin-left: 2px;
-  background: #2f4fd8;
-  vertical-align: text-bottom;
+  vertical-align: -0.12em;
+  background: #2b2117;
   animation: caret-blink 1s steps(1) infinite;
 }
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
 
-/* Quiet entrance for results */
-@keyframes rise-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.rise-in { animation: rise-in 320ms ease both; }
+/* Results ease in like a page being set down. */
+.rise-in {
+  animation: rise-in 0.35s ease-out both;
+}
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
 
-/* Loading shimmer for pending providers */
-@keyframes soft-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
-.soft-pulse { animation: soft-pulse 1.4s ease-in-out infinite; }
+/* Gentle pulse for the "consulting" status dot. */
+.soft-pulse {
+  animation: soft-pulse 1.4s ease-in-out infinite;
+}
+@keyframes soft-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}

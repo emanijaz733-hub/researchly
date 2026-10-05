@@ -10,8 +10,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nexus"]
       interval: 5s
-      retries: 30
-      start_period: 120s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -22,7 +21,6 @@ services:
 
   backend:
     build: ./backend
-    restart: on-failure
     environment:
       NEXUS_DATABASE_URL: postgresql+asyncpg://nexus:${POSTGRES_PASSWORD:-nexus}@postgres:5432/nexus
       NEXUS_REDIS_URL: redis://redis:6379/0
@@ -30,7 +28,7 @@ services:
       NEXUS_ANTHROPIC_API_KEY: ${NEXUS_ANTHROPIC_API_KEY:-}
       NEXUS_GROK_API_KEY: ${NEXUS_GROK_API_KEY:-}
       NEXUS_LLM_PROVIDER: ${NEXUS_LLM_PROVIDER:-anthropic}
-      NEXUS_LLM_MODEL: ${NEUS_LLM_MODEL:-claude-sonnet-4-6}
+      NEXUS_LLM_MODEL: ${NEXUS_LLM_MODEL:-claude-sonnet-4-6}
       NEXUS_ENVIRONMENT: production
     depends_on:
       postgres:
@@ -40,7 +38,6 @@ services:
 
   frontend:
     build: ./frontend
-    restart: on-failure
     environment:
       NEXT_PUBLIC_API_URL: http://backend:8000
     depends_on:
@@ -48,7 +45,6 @@ services:
 
   nginx:
     image: nginx:alpine
-    restart: on-failure
     ports:
       - "8080:80"
     volumes:

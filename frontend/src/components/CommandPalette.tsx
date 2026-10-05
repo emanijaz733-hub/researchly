@@ -8,6 +8,7 @@ interface Command {
   run: () => void;
 }
 
+/** Ctrl K index: looks like a card pulled from a catalog drawer. */
 export function CommandPalette({ onSearch }: { onSearch: (q: string) => void }) {
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
@@ -16,16 +17,18 @@ export function CommandPalette({ onSearch }: { onSearch: (q: string) => void }) 
   const router = useRouter();
 
   const commands: Command[] = [
-    { label: "Go to search", hint: "home", run: () => router.push("/") },
-    { label: "Research chat", hint: "multi-turn", run: () => router.push("/chat") },
-    { label: "Open library", hint: "sources + notebook", run: () => router.push("/library") },
-    { label: "Workspaces", hint: "organize", run: () => router.push("/workspaces") },
-    { label: "Admin dashboard", hint: "metrics", run: () => router.push("/admin") },
-    { label: "Sign in", hint: "account", run: () => router.push("/login") },
+    { label: "New inquiry", hint: "home", run: () => router.push("/") },
+    { label: "Correspondence", hint: "research chat", run: () => router.push("/chat") },
+    { label: "Library", hint: "sources + notebook", run: () => router.push("/library") },
+    { label: "Case files", hint: "workspaces", run: () => router.push("/workspaces") },
+    { label: "Archive ledger", hint: "admin", run: () => router.push("/admin") },
+    { label: "Reader's card", hint: "sign in", run: () => router.push("/login") },
   ];
 
   const filtered = value
-    ? commands.filter((c) => c.label.toLowerCase().includes(value.toLowerCase()))
+    ? commands.filter((c) =>
+        `${c.label} ${c.hint}`.toLowerCase().includes(value.toLowerCase())
+      )
     : commands;
 
   useEffect(() => {
@@ -60,16 +63,17 @@ export function CommandPalette({ onSearch }: { onSearch: (q: string) => void }) 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center bg-ink/25 pt-[18vh] backdrop-blur-[2px]"
+      className="fixed inset-0 z-50 flex items-start justify-center bg-desk/60 px-4 pt-[18vh]"
       onClick={() => setOpen(false)}
       role="dialog"
       aria-modal="true"
-      aria-label="Command palette"
+      aria-label="Command index"
     >
       <div
-        className="w-full max-w-lg overflow-hidden rounded-2xl border border-hairline bg-surface shadow-overlay"
+        className="w-full max-w-lg -rotate-1 border-t-[3px] border-redink bg-surface shadow-overlay"
         onClick={(e) => e.stopPropagation()}
       >
+        <p className="type-label px-5 pt-4">INDEX CARD</p>
         <input
           ref={inputRef}
           value={value}
@@ -82,10 +86,11 @@ export function CommandPalette({ onSearch }: { onSearch: (q: string) => void }) 
             if (e.key === "ArrowUp") setSelected((s) => Math.max(s - 1, 0));
             if (e.key === "Enter") runSelected();
           }}
-          placeholder="Type a command or search…"
-          className="w-full border-b border-hairline bg-transparent px-5 py-3.5 text-sm outline-none placeholder:text-muted/70"
+          placeholder="Go to a page or type a question"
+          aria-label="Command or question"
+          className="w-full border-0 border-b border-dashed border-rule bg-transparent px-5 py-3 font-mono text-[16px] text-ink outline-none placeholder:text-muted/70"
         />
-        <ul className="max-h-64 overflow-y-auto p-1">
+        <ul className="max-h-72 overflow-y-auto p-1">
           {filtered.map((c, i) => (
             <li key={c.label}>
               <button
@@ -94,18 +99,18 @@ export function CommandPalette({ onSearch }: { onSearch: (q: string) => void }) 
                   setOpen(false);
                 }}
                 onMouseEnter={() => setSelected(i)}
-                className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-sm ${
+                className={`flex min-h-[44px] w-full items-center justify-between px-4 text-left text-[18px] ${
                   i === selected ? "bg-wash text-ink" : "text-muted"
                 }`}
               >
                 {c.label}
-                <span className="text-[11px] text-muted/70">{c.hint}</span>
+                <span className="font-mono text-[12px] text-muted">{c.hint}</span>
               </button>
             </li>
           ))}
           {filtered.length === 0 && (
-            <li className="px-3 py-2.5 text-sm text-muted">
-              Press Enter to search “{value}”
+            <li className="px-4 py-3 text-[17px] italic text-muted">
+              Press Enter to research “{value}”
             </li>
           )}
         </ul>

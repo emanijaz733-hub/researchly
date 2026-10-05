@@ -8,7 +8,7 @@ export interface Citation {
   provider?: string;
 }
 
-/** Render text where [n] markers become links to their cited source. */
+/** Render text where [n] markers become red footnote links to their source. */
 export function CitedText({ text, citations }: { text: string; citations: Citation[] }) {
   const byN = new Map(citations.map((c) => [c.n, c]));
   const parts = text.split(/(\[\d+\]|\*\*[^*]+\*\*|\n)/g);
@@ -20,8 +20,14 @@ export function CitedText({ text, citations }: { text: string; citations: Citati
           const c = byN.get(parseInt(cite[1], 10));
           if (c) {
             return (
-              <a key={i} href={c.url} target="_blank" rel="noreferrer"
-                 title={c.title} className="cite-mark">
+              <a
+                key={i}
+                href={c.url}
+                target="_blank"
+                rel="noreferrer"
+                title={c.title}
+                className="cite-mark"
+              >
                 {c.n}
               </a>
             );

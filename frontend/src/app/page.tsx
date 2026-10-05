@@ -15,51 +15,54 @@ const EXAMPLES = [
 
 const PROVIDERS = ["Wikipedia", "arXiv", "Hacker News", "GitHub", "Stack Exchange", "Open Library"];
 
+const ROMAN = ["i", "ii", "iii", "iv", "v", "vi", "vii", "viii"];
+
 export default function Home() {
   const { run, phase, results, providers, error, latencyMs, activeCitation, followups } = useSearch();
   const busy = phase === "searching" || phase === "answering";
   const idle = phase === "idle";
 
   return (
-    <main className="mx-auto max-w-6xl px-5">
+    <main className="mx-auto max-w-6xl px-5 sm:px-10">
       <CommandPalette onSearch={run} />
       <Nav />
 
       {idle ? (
-        <section className="mx-auto max-w-2xl pb-24 pt-20 text-center sm:pt-28">
-          <h1 className="font-display text-5xl font-medium leading-[1.08] tracking-tight sm:text-6xl">
-            Ask once.
-            <br />
-            Read every source.
+        /* A blank sheet waiting for a question. */
+        <section className="mx-auto max-w-3xl pb-24 pt-16 sm:pt-24">
+          <h1 className="mb-10 text-[clamp(38px,5vw,58px)] italic leading-[1.12]">
+            What are you researching today?
           </h1>
-          <p className="mx-auto mt-5 max-w-md text-base leading-relaxed text-muted">
-            Nexus searches six research libraries in parallel and writes one
-            answer, cited line by line.
+
+          <SearchBar onSearch={run} busy={busy} />
+
+          <p className="mt-5 font-hand text-[22px] text-redink">
+            {PROVIDERS.length} archives are standing by
           </p>
 
-          <div className="mt-10 text-left">
-            <SearchBar onSearch={run} busy={busy} />
+          <div className="mt-14 max-w-xl">
+            <h2 className="type-label mb-2">TRY ONE OF THESE</h2>
+            <div className="flex flex-col">
+              {EXAMPLES.map((q, i) => (
+                <button
+                  key={q}
+                  onClick={() => run(q)}
+                  className="min-h-[44px] border-b border-dotted border-rule/60 py-3 text-left text-[19px] text-ink last:border-b-0 hover:text-redink"
+                >
+                  {ROMAN[i]}. {q}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap justify-center gap-2">
-            {EXAMPLES.map((q) => (
-              <button
-                key={q}
-                onClick={() => run(q)}
-                className="rounded-full border border-hairline bg-surface px-3.5 py-1.5 text-xs text-muted transition-colors hover:border-cobalt/40 hover:text-ink"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-
-          <p className="mt-16 text-xs tracking-wide text-muted/70">
-            {PROVIDERS.join("  ·  ")}
+          <p className="mt-16 font-mono text-[12px] tracking-wide text-muted">
+            Archives: {PROVIDERS.join(" · ")}
           </p>
         </section>
       ) : (
-        <section className="pb-20 pt-4">
-          <div className="mx-auto max-w-3xl">
+        /* The research paper: findings in the middle, references in the margin. */
+        <section className="pb-24 pt-8">
+          <div className="max-w-4xl">
             <SearchBar onSearch={run} busy={busy} />
             <div className="mt-4">
               <ProviderChips providers={providers} />
@@ -67,36 +70,33 @@ export default function Home() {
           </div>
 
           {error && (
-            <div className="mx-auto mt-8 max-w-3xl rounded-xl border border-danger/30 bg-surface p-4 text-sm text-danger">
-              Search failed: {error}. Check that the API is running, then try again.
+            <div className="mt-10 max-w-2xl -rotate-1 border-[2.5px] border-redink p-5 text-redink">
+              <p className="type-label mb-1 !text-redink">THE ARCHIVE DID NOT ANSWER</p>
+              <p className="text-[18px]">
+                {error}. Check that the API is running, then try again.
+              </p>
             </div>
           )}
 
           {!error && (
-            <div className="rise-in mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <section aria-label="Answer">
-                <div className="mb-4 flex items-baseline gap-3 border-b border-hairline pb-3">
-                  <h2 className="font-display text-lg font-medium">Answer</h2>
-                  {latencyMs !== null && (
-                    <span className="font-mono text-[11px] text-muted">
-                      searched in {latencyMs}ms
-                    </span>
-                  )}
-                </div>
+            <div className="rise-in mt-12 flex flex-wrap gap-12">
+              <section aria-label="Findings" className="min-w-0 flex-[999_1_560px]">
                 <AnswerPanel />
+                {latencyMs !== null && (
+                  <p className="mt-3 font-mono text-[12px] text-muted">answered in {latencyMs} ms</p>
+                )}
+
                 {followups.length > 0 && (
-                  <div className="mt-8 border-t border-hairline pt-5">
-                    <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted">
-                      Keep going
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {followups.map((q) => (
+                  <div className="mt-12 border-t border-dotted border-rule pt-5">
+                    <h2 className="type-label mb-2">FURTHER LINES OF INQUIRY</h2>
+                    <div className="flex flex-col">
+                      {followups.map((q, i) => (
                         <button
                           key={q}
                           onClick={() => run(q)}
-                          className="rounded-full border border-hairline bg-surface px-3.5 py-1.5 text-left text-xs text-muted transition-colors hover:border-cobalt/40 hover:text-ink"
+                          className="min-h-[44px] border-b border-dotted border-rule/60 py-3 text-left text-[19px] text-ink last:border-b-0 hover:text-redink"
                         >
-                          {q}
+                          {ROMAN[i] ?? i + 1}. {q}
                         </button>
                       ))}
                     </div>
@@ -104,19 +104,27 @@ export default function Home() {
                 )}
               </section>
 
-              <aside aria-label="Sources">
-                <div className="mb-4 flex items-baseline justify-between border-b border-hairline pb-3">
-                  <h2 className="font-display text-lg font-medium">Sources</h2>
-                  <span className="font-mono text-[11px] text-muted">{results.length}</span>
+              <aside
+                aria-label="References"
+                className="min-w-0 flex-[1_1_280px] border-l border-rule/50 pl-6"
+              >
+                <div className="mb-4 flex items-baseline justify-between">
+                  <h2 className="type-label">REFERENCES</h2>
+                  <span className="font-mono text-[12px] text-muted">{results.length}</span>
                 </div>
-                <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-3">
                   {results.slice(0, 8).map((r, i) => (
                     <ResultCard key={r.id} result={r} index={i + 1} active={activeCitation === i + 1} />
                   ))}
                   {results.length === 0 && phase !== "searching" && (
-                    <p className="text-xs text-muted">No sources found. Try broader terms.</p>
+                    <p className="italic text-muted">No sources found. Try broader terms.</p>
                   )}
                 </div>
+                {results.length > 0 && (
+                  <p className="mt-6 text-[15px] italic text-muted">
+                    Click a red number in the findings to jump to its reference.
+                  </p>
+                )}
               </aside>
             </div>
           )}

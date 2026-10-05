@@ -2,29 +2,29 @@
 import { Fragment } from "react";
 import { useSearch } from "@/store/search";
 
-/** Renders the streamed answer, turning [n] markers into interactive
- * citations that highlight the matching source card. */
+/** The findings: streamed answer in clean serif, with red footnote numbers
+ * that highlight and jump to the matching reference. */
 export function AnswerPanel() {
   const { answer, phase, setActiveCitation, results } = useSearch();
   if (phase === "idle") return null;
 
   if (phase === "searching") {
     return (
-      <div className="flex items-center gap-2.5 text-sm text-muted" role="status">
-        <span className="soft-pulse h-2 w-2 rounded-full bg-cobalt" aria-hidden />
-        Reading every source in parallel
+      <div className="flex items-center gap-3 font-mono text-[14px] text-muted" role="status">
+        <span className="soft-pulse h-2 w-2 rounded-full bg-redink" aria-hidden />
+        Consulting the archives…
       </div>
     );
   }
 
   return (
-    <article
-      aria-live="polite"
-      className="max-w-measure text-[16px] leading-[1.75] text-ink/90"
-    >
-      {renderWithCitations(answer, results.length, setActiveCitation)}
-      {phase === "answering" && <span className="stream-caret" aria-hidden />}
-    </article>
+    <section>
+      <h2 className="type-label mb-4">FINDINGS</h2>
+      <article aria-live="polite" className="max-w-measure text-[20px] leading-[1.75] text-ink">
+        {renderWithCitations(answer, results.length, setActiveCitation)}
+        {phase === "answering" && <span className="stream-caret" aria-hidden />}
+      </article>
+    </section>
   );
 }
 

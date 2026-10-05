@@ -1,90 +1,136 @@
-# NEXUS
+# Researchly
 
-AI research platform: one query fans out to multiple providers in parallel,
-results are normalized, deduplicated, scored and ranked, and an AI answer is
-streamed back with numbered citations linked to sources.
+Research answers you can trace back to the source.
 
-## Quick start (no Docker)
+An AI research platform. You ask one question, Researchly searches several sources in parallel, cleans and ranks the results, and streams back an answer with numbered citations linked to the original sources.
 
-Backend:
+**Stack:** Next.js · TypeScript · FastAPI · PostgreSQL · Redis · Docker · Nginx
 
-    cd backend
-    python -m venv .venv && .venv/bin/pip install -r requirements.txt
-    .venv/bin/uvicorn app.main:app --reload        # http://localhost:8000/docs
+![Search results with a footnoted answer](docs/screenshots/search.png)
 
-Frontend:
+| | |
+|---|---|
+| ![Home](docs/screenshots/home.png) | ![Research chat as correspondence](docs/screenshots/chat.png) |
+| ![Library as a card catalog](docs/screenshots/library.png) | ![Notebook](docs/screenshots/notebook.png) |
+| ![Workspaces as case files](docs/screenshots/workspaces.png) | ![Sign in as a reader's card](docs/screenshots/login.png) |
+| ![Shared link as a photocopy](docs/screenshots/shared.png) | ![Admin ledger](docs/screenshots/admin.png) |
 
-    cd frontend
-    npm install
-    npm run dev                                    # http://localhost:3000
+<sub>Screenshots show the real interface filled with sample data.</sub>
 
-SQLite and in-memory cache/rate-limiting are used automatically — no
-services required. Set `NEXUS_ANTHROPIC_API_KEY` for synthesized answers;
-without it NEXUS falls back to an extractive, still-cited answer.
+---
 
-## Quick start (Docker)
+## What it does
 
-    cp .env.example .env    # edit values
-    docker compose up --build   # http://localhost:8080
-
-Runs PostgreSQL, Redis, the API, the frontend, and Nginx (with SSE
-buffering disabled on /api/).
+- **Parallel multi-source search**: Wikipedia, Hacker News, arXiv, GitHub, Stack Overflow and Open Library are queried at the same time. A slow or failing source is timed out and skipped instead of breaking the whole search.
+- **Result pipeline**: normalize → deduplicate → score → rank.
+- **Streaming cited answers**: the answer streams in over SSE, and every `[n]` links to its source.
+- **Research chat**: multi-turn conversations that keep context and citations, shareable through public links.
+- **Workspace tools**: bookmarks with notes, collections, a notebook, and Markdown export.
+- **Old research paper interface**: every page is a physical research object. Search results read like a footnoted paper, the library is a card catalog, chat is written correspondence, workspaces are case files.
+- **Pluggable LLM layer**: works with Anthropic or Grok (xAI). With no API key it still returns an extractive answer built from the top sources, with citations.
 
 ## Architecture
 
-    frontend (Next.js) ── /api/v1 ──> FastAPI
-                                        ├─ auth: JWT access + refresh with rotation & revocation (Redis jti denylist), bcrypt, RBAC guard, logout
-                                        ├─ search orchestrator ── parallel, per-provider
-                                        │     timeouts, failure isolation
-                                        │     └─ providers (plugins): wikipedia, hackernews,
-                                        │        arxiv, github — register via decorator
-                                        ├─ pipeline: normalize → dedup → score → rank
-                                        ├─ ai: provider-agnostic LLM (Anthropic/OpenAI)
-                                        │      streaming answers with [n] citations,
-                                        │      extractive fallback with no key
-                                        ├─ cache + rate limit: Redis, in-memory fallback
-                                        └─ PostgreSQL (SQLite in dev)
+```mermaid
+flowchart LR
+    U[Browser] --> N[Nginx]
+    N --> F[Next.js frontend]
+    N -->|/api/v1| B[FastAPI backend]
+    B --> O[Search orchestrator]
+    O --> P1[Wikipedia]
+    O --> P2[arXiv]
+    O --> P3[GitHub]
+    O --> P4[Hacker News]
+    O --> P5[Stack Overflow]
+    O --> P6[Open Library]
+    O --> PL[Pipeline: normalize, dedup, score, rank]
+    PL --> AI[LLM layer: streamed answer + citations]
+    B --> R[(Redis: cache, rate limits, token denylist)]
+    B --> DB[(PostgreSQL)]
+```
 
-### Adding a provider
+## Security and reliability
 
-Create `backend/app/providers/yourprovider.py`:
+- JWT access + refresh tokens, with refresh-token rotation and revocation (jti denylist in Redis)
+- bcrypt password hashing, role-based access control, `/logout` endpoint
+- Rate limiting and caching (Redis, with an in-memory fallback)
+- Nginx security headers, SSE buffering disabled for streaming
+- Structured logging, health checks, GitHub Actions CI
 
-    @register_provider
-    class YourProvider(SearchProvider):
-        name = "yourprovider"
-        description = "..."
-        async def search(self, query, client, limit): ...
+## Run it
 
-Import it in `app/providers/__init__.py`. Nothing else changes — the
-orchestrator, API, and UI pick it up automatically.
+### With Docker (recommended)
+
+```bash
+cp .env.example .env      # then fill in the values
+docker compose up --build
+```
+
+Open **http://localhost:8080**. This starts PostgreSQL, Redis, the API, the frontend and Nginx.
+
+### Without Docker
+
+Backend (uses SQLite and in-memory cache automatically):
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate          # Windows  (macOS/Linux: source .venv/bin/activate)
+pip install -r requirements.txt
+uvicorn app.main:app --reload   # API docs at http://localhost:8000/docs
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev                     # http://localhost:3000
+```
+
+### Choosing an LLM
+
+Set these in `.env`:
+
+| Provider | Settings |
+|---|---|
+| Anthropic | `NEXUS_ANTHROPIC_API_KEY=...` |
+| Grok (xAI) | `NEXUS_LLM_PROVIDER=grok`, `NEXUS_LLM_MODEL=...`, `NEXUS_GROK_API_KEY=...` |
+| None | Leave keys empty and you get extractive cited answers |
+
+## Adding a search provider
+
+Providers are plugins. Create `backend/app/providers/yourprovider.py`:
+
+```python
+@register_provider
+class YourProvider(SearchProvider):
+    name = "yourprovider"
+    description = "..."
+    async def search(self, query, client, limit): ...
+```
+
+Then import it in `app/providers/__init__.py`. The orchestrator, API and UI pick it up automatically.
 
 ## Tests
 
-    cd backend && .venv/bin/python -m pytest tests
+```bash
+cd backend
+python -m pytest tests
+```
 
-Covers the result pipeline (normalization, dedup, scoring, ranking),
-orchestrator guarantees (parallelism, per-provider timeout and failure
-isolation), and the full auth + bookmarks API flow.
+The tests cover the result pipeline (normalization, dedup, scoring, ranking), the orchestrator's guarantees (parallel calls, per-provider timeouts, failure isolation), and the full auth and bookmarks API flow.
 
-## Honest status
+## Status
 
-Implemented and tested: provider plugin system (6 providers: wikipedia,
-hackernews, arxiv, github, stackoverflow, openlibrary), parallel
-orchestrator with failure/timeout isolation, result pipeline, SSE
-streaming search with cited answers, multi-turn research chat with
-preserved context and persisted citations, conversation sharing via
-public links, notebook, bookmark annotations, markdown export
-(sources/notes/conversations), follow-up question suggestions (needs an
-LLM key), JWT auth with rotating/revocable refresh tokens + RBAC, rate limiting, caching,
-bookmarks/collections/workspaces API + UIs, admin metrics dashboard,
-health checks, structured logging, Docker/Nginx infra, dark UI with
-command palette and interactive citations.
+**Working:** everything listed above.
 
-Optional (works only with a key): synthesized LLM answers and follow-ups
-(Anthropic or OpenAI key); semantic embedding rerank (OpenAI key —
-Anthropic has no embeddings API). Without keys, search still works with
-the lexical ranker and extractive cited answers.
+**Needs an API key:** synthesized LLM answers and follow-up question suggestions. Semantic embedding rerank needs an OpenAI key; without it Researchly uses the lexical ranker.
 
-Not built: e2e/accessibility test suites, PDF export (markdown only),
-provider enable/disable admin UI, analytics charts. Deployment (domain,
-HTTPS, keys) is on you.
+The environment variables keep the `NEXUS_` prefix from the project's original name.
+
+**Not built yet:** end-to-end and accessibility tests, PDF export (Markdown only), an admin UI to enable or disable providers, analytics charts.
+
+## License
+
+MIT
